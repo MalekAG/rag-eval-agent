@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "name": "Sample QA Dataset",
+    "description": "Example test cases for RAG evaluation",
+    "created": "2026-02-02",
+    "version": "1.0"
+  },
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "question": "What is the refund policy?",
+      "ground_truth": "Full refund within 30 days of purchase with original receipt.",
+      "expected_contexts": ["policy.md", "returns.md"],
+      "critical": true,
+      "tags": ["billing", "policy"]
+    },
+    {
+      "id": "tc_002",
+      "question": "How do I reset my password?",
+      "ground_truth": "Click 'Forgot Password' on the login page and enter your email address. You will receive a reset link within 5 minutes.",
+      "expected_contexts": ["auth.md"],
+      "critical": true,
+      "tags": ["authentication", "account"]
+    },
+    {
+      "id": "tc_003",
+      "question": "What payment methods are accepted?",
+      "ground_truth": "We accept Visa, Mastercard, American Express, PayPal, and bank transfers.",
+      "expected_contexts": ["payments.md"],
+      "critical": false,
+      "tags": ["billing", "payments"]
+    },
+    {
+      "id": "tc_004",
+      "question": "How do I contact customer support?",
+      "ground_truth": "Contact customer support via email at support@example.com or call 1-800-EXAMPLE. Support is available 24/7.",
+      "expected_contexts": ["support.md", "contact.md"],
+      "critical": false,
+      "tags": ["support"]
+    },
+    {
+      "id": "tc_005",
+      "question": "What are the shipping options?",
+      "ground_truth": "Standard shipping (5-7 business days), Express shipping (2-3 business days), and Overnight shipping (next business day) are available.",
+      "expected_contexts": ["shipping.md"],
+      "critical": false,
+      "tags": ["shipping", "logistics"]
+    },
+    {
+      "id": "tc_006",
+      "question": "How do I cancel my subscription?",
+      "ground_truth": "Go to Account Settings > Subscription > Cancel Subscription. Cancellation takes effect at the end of the current billing period.",
+      "expected_contexts": ["subscription.md", "billing.md"],
+      "critical": true,
+      "tags": ["subscription", "billing"]
+    },
+    {
+      "id": "tc_007",
+      "question": "What is the maximum file upload size?",
+      "ground_truth": "The maximum file upload size is 100MB for standard accounts and 500MB for premium accounts.",
+      "expected_contexts": ["limits.md", "features.md"],
+      "critical": false,
+      "tags": ["technical", "limits"]
+    },
+    {
+      "id": "tc_008",
+      "question": "How do I enable two-factor authentication?",
+      "ground_truth": "Go to Security Settings > Two-Factor Authentication > Enable. You can use an authenticator app or SMS verification.",
+      "expected_contexts": ["security.md", "auth.md"],
+      "critical": false,
+      "tags": ["authentication", "security"]
+    },
+    {
+      "id": "tc_009",
+      "question": "What happens to my data if I delete my account?",
+      "ground_truth": "All personal data is permanently deleted within 30 days. Anonymized usage data may be retained for analytics.",
+      "expected_contexts": ["privacy.md", "data.md"],
+      "critical": false,
+      "tags": ["privacy", "data"]
+    },
+    {
+      "id": "tc_010",
+      "question": "How do I export my data?",
+      "ground_truth": "Go to Account Settings > Data > Export. You can download all your data in JSON or CSV format within 24 hours.",
+      "expected_contexts": ["data.md", "export.md"],
+      "critical": false,
+      "tags": ["data", "export"]
+    }
+  ]
+}

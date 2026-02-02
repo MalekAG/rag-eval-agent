@@ -1,0 +1,52 @@
+# RAG Evaluation Configuration
+# All settings can be overridden via CLI flags
+
+# Adapter settings
+adapter: http
+endpoint: "http://localhost:8000/query"
+
+# HTTP adapter configuration
+http:
+  headers:
+    # Use environment variable for auth
+    # Authorization: "Bearer ${RAG_API_TOKEN}"
+    Content-Type: "application/json"
+  timeout: 30
+  slow_threshold: 5
+
+# Execution settings
+concurrency: 1  # Number of parallel test cases
+
+# Retry configuration
+retry:
+  max_attempts: 3
+  backoff: exponential  # or "fixed"
+  base_delay: 1.0
+
+# Metric weights (percentages, normalized automatically)
+weights:
+  faithfulness: 40
+  answer_relevance: 20
+  context_precision: 20
+  context_recall: 20
+
+# Thresholds for CI integration
+# Uncomment and set values to enable threshold checks
+thresholds:
+  composite: 0.7
+  faithfulness: 0.7
+  # answer_relevance: 0.7
+  # context_precision: 0.6
+  # context_recall: 0.6
+
+# Answer comparison settings
+comparison:
+  semantic_similarity_threshold: 0.85
+  embedding_model: "all-MiniLM-L6-v2"
+
+# Output settings
+output:
+  directory: "results"
+  formats:
+    - markdown
+    - json
