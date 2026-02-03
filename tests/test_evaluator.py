@@ -65,6 +65,7 @@ class TestHTTPAdapter:
             endpoint="http://localhost:8000/query",
             headers={"Authorization": "Bearer test"},
             timeout=30,
+            allow_internal=True,  # Allow localhost for testing
         )
         assert adapter.endpoint == "http://localhost:8000/query"
         assert "Authorization" in adapter.headers
@@ -81,7 +82,7 @@ class TestHTTPAdapter:
         mock_response.status_code = 200
         mock_post.return_value = mock_response
 
-        adapter = HTTPAdapter(endpoint="http://localhost:8000/query")
+        adapter = HTTPAdapter(endpoint="http://localhost:8000/query", allow_internal=True)
         answer, contexts = adapter.query("What is the refund policy?")
 
         assert answer == "The refund policy is 30 days."
@@ -93,7 +94,7 @@ class TestHTTPAdapter:
         import requests
         mock_post.side_effect = requests.exceptions.Timeout()
 
-        adapter = HTTPAdapter(endpoint="http://localhost:8000/query")
+        adapter = HTTPAdapter(endpoint="http://localhost:8000/query", allow_internal=True)
         with pytest.raises(TimeoutError):
             adapter.query("What is the refund policy?")
 
@@ -150,14 +151,22 @@ class TestMetrics:
 class TestReport:
     """Tests for report generation."""
 
-    def test_report_generator_initialization(self, tmp_path):
+    def test_report_generator_initialization(self, tmp_path, monkeypatch):
         """Test report generator creates output directory."""
+        # Allow tmp_path for testing by monkeypatching ALLOWED_OUTPUT_DIRS
+        import report
+        monkeypatch.setattr(report, "ALLOWED_OUTPUT_DIRS", [tmp_path, tmp_path / "results"])
+
         output_dir = tmp_path / "results"
         gen = ReportGenerator(str(output_dir))
         assert output_dir.exists()
 
-    def test_markdown_report_generation(self, tmp_path):
+    def test_markdown_report_generation(self, tmp_path, monkeypatch):
         """Test markdown report generation."""
+        # Allow tmp_path for testing
+        import report
+        monkeypatch.setattr(report, "ALLOWED_OUTPUT_DIRS", [tmp_path])
+
         gen = ReportGenerator(str(tmp_path))
 
         results = [
@@ -208,8 +217,12 @@ class TestReport:
 class TestDatasetLoading:
     """Tests for dataset loading and validation."""
 
-    def test_load_valid_dataset(self, tmp_path, sample_dataset):
+    def test_load_valid_dataset(self, tmp_path, sample_dataset, monkeypatch):
         """Test loading a valid dataset."""
+        # Allow tmp_path for testing
+        import evaluator
+        monkeypatch.setattr(evaluator, "ALLOWED_DATASET_DIRS", [tmp_path])
+
         dataset_path = tmp_path / "test_dataset.json"
         dataset_path.write_text(json.dumps(sample_dataset))
 
@@ -220,14 +233,22 @@ class TestDatasetLoading:
         assert len(loaded["test_cases"]) == 2
         assert loaded["test_cases"][0]["critical"] is True
 
-    def test_load_missing_dataset(self):
+    def test_load_missing_dataset(self, tmp_path, monkeypatch):
         """Test error on missing dataset."""
+        # Allow tmp_path for testing
+        import evaluator
+        monkeypatch.setattr(evaluator, "ALLOWED_DATASET_DIRS", [tmp_path])
+
         from evaluator import load_dataset
         with pytest.raises(FileNotFoundError):
-            load_dataset("nonexistent.json")
+            load_dataset(str(tmp_path / "nonexistent.json"))
 
-    def test_load_invalid_dataset(self, tmp_path):
+    def test_load_invalid_dataset(self, tmp_path, monkeypatch):
         """Test error on dataset without test_cases."""
+        # Allow tmp_path for testing
+        import evaluator
+        monkeypatch.setattr(evaluator, "ALLOWED_DATASET_DIRS", [tmp_path])
+
         dataset_path = tmp_path / "invalid.json"
         dataset_path.write_text(json.dumps({"data": []}))
 
@@ -241,6 +262,10 @@ class TestEndToEnd:
 
     def test_dry_run(self, tmp_path, sample_dataset, monkeypatch):
         """Test dry run mode validates without executing."""
+        # Allow tmp_path for testing
+        import evaluator
+        monkeypatch.setattr(evaluator, "ALLOWED_DATASET_DIRS", [tmp_path])
+
         dataset_path = tmp_path / "dataset.json"
         dataset_path.write_text(json.dumps(sample_dataset))
 

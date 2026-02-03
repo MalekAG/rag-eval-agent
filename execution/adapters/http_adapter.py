@@ -4,14 +4,74 @@ HTTP adapter for generic RAG API endpoints.
 Supports configurable authentication and response parsing.
 """
 
+import ipaddress
 import os
+import socket
 from typing import Optional
+from urllib.parse import urlparse
+
 import requests
 from dotenv import load_dotenv
 
 from .base import RAGAdapter
 
 load_dotenv()
+
+
+# Blocked IP ranges for SSRF protection
+BLOCKED_IP_RANGES = [
+    ipaddress.ip_network("127.0.0.0/8"),      # Loopback
+    ipaddress.ip_network("10.0.0.0/8"),       # Private Class A
+    ipaddress.ip_network("172.16.0.0/12"),    # Private Class B
+    ipaddress.ip_network("192.168.0.0/16"),   # Private Class C
+    ipaddress.ip_network("169.254.0.0/16"),   # Link-local (includes AWS metadata)
+    ipaddress.ip_network("0.0.0.0/8"),        # "This" network
+    ipaddress.ip_network("224.0.0.0/4"),      # Multicast
+    ipaddress.ip_network("240.0.0.0/4"),      # Reserved
+]
+
+
+def validate_url(url: str, allow_internal: bool = False) -> None:
+    """
+    Validate URL to prevent SSRF attacks.
+
+    Args:
+        url: The URL to validate
+        allow_internal: If True, allows internal/private network addresses.
+                       Should only be True for testing or controlled environments.
+
+    Raises:
+        ValueError: If URL is invalid or points to blocked resources
+    """
+    parsed = urlparse(url)
+
+    # Check scheme
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed.")
+
+    # Check hostname exists
+    if not parsed.hostname:
+        raise ValueError("URL must have a valid hostname")
+
+    # Skip IP range checks if internal addresses are allowed
+    if allow_internal:
+        return
+
+    # Resolve hostname to IP and check against blocked ranges
+    try:
+        ip_str = socket.gethostbyname(parsed.hostname)
+        ip = ipaddress.ip_address(ip_str)
+
+        for blocked_range in BLOCKED_IP_RANGES:
+            if ip in blocked_range:
+                raise ValueError(
+                    f"URL hostname resolves to blocked IP range ({ip_str}). "
+                    "Internal/private network addresses are not allowed."
+                )
+    except socket.gaierror:
+        # DNS resolution failed - allow it to fail later during actual request
+        # This handles cases where the hostname might be valid but not resolvable yet
+        pass
 
 
 class HTTPAdapter(RAGAdapter):
@@ -35,6 +95,7 @@ class HTTPAdapter(RAGAdapter):
         response_mapping: Optional[dict[str, str]] = None,
         request_format: Optional[dict] = None,
         health_endpoint: Optional[str] = None,
+        allow_internal: bool = False,
     ):
         """
         Initialize HTTP adapter.
@@ -48,11 +109,20 @@ class HTTPAdapter(RAGAdapter):
             request_format: Custom request body template. Use {question} placeholder.
                            Default: {"question": "{question}"}
             health_endpoint: Optional health check URL. If None, tries common patterns.
+            allow_internal: If True, allows internal/private network addresses.
+                           Should only be True for testing or controlled environments.
         """
+        # Validate endpoint URL to prevent SSRF
+        validate_url(endpoint, allow_internal=allow_internal)
+
         self.endpoint = endpoint
         self.timeout = timeout
         self.response_mapping = response_mapping or {}
         self.request_format = request_format or {"question": "{question}"}
+
+        # Validate health endpoint if provided
+        if health_endpoint:
+            validate_url(health_endpoint, allow_internal=allow_internal)
         self.health_endpoint = health_endpoint
 
         # Build headers with auth support

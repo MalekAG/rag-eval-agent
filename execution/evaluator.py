@@ -18,6 +18,51 @@ from typing import Optional
 
 from tqdm import tqdm
 
+
+# Allowed directories for path validation (relative to project root)
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+ALLOWED_DATASET_DIRS = [
+    PROJECT_ROOT / "datasets",
+    PROJECT_ROOT / ".tmp",
+]
+ALLOWED_OUTPUT_DIRS = [
+    PROJECT_ROOT / "results",
+    PROJECT_ROOT / ".tmp",
+]
+
+
+def validate_path(file_path: str, allowed_dirs: list[Path], purpose: str) -> Path:
+    """
+    Validate that a file path is within allowed directories.
+
+    Args:
+        file_path: The path to validate
+        allowed_dirs: List of allowed parent directories
+        purpose: Description for error messages (e.g., "dataset", "output")
+
+    Returns:
+        Resolved Path object
+
+    Raises:
+        ValueError: If path is outside allowed directories
+    """
+    path = Path(file_path).resolve()
+
+    # Check if path is within any allowed directory
+    for allowed_dir in allowed_dirs:
+        try:
+            path.relative_to(allowed_dir)
+            return path
+        except ValueError:
+            continue
+
+    # Path traversal attempt or path outside allowed dirs
+    allowed_str = ", ".join(str(d) for d in allowed_dirs)
+    raise ValueError(
+        f"Invalid {purpose} path: {file_path}. "
+        f"Path must be within allowed directories: {allowed_str}"
+    )
+
 from config import EvalConfig, load_config, validate_config
 from metrics import MetricsCalculator, calculate_composite_score
 from report import (
@@ -43,8 +88,14 @@ def load_dataset(dataset_path: str) -> dict:
 
     Returns:
         Dataset dict with metadata and test_cases
+
+    Raises:
+        ValueError: If path is outside allowed directories
+        FileNotFoundError: If dataset file doesn't exist
     """
-    path = Path(dataset_path)
+    # Validate path is within allowed directories (prevents path traversal)
+    path = validate_path(dataset_path, ALLOWED_DATASET_DIRS, "dataset")
+
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found: {dataset_path}")
 

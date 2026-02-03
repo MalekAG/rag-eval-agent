@@ -12,6 +12,49 @@ from pathlib import Path
 from typing import Optional
 
 
+# Allowed directories for output (relative to project root)
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+ALLOWED_OUTPUT_DIRS = [
+    PROJECT_ROOT / "results",
+    PROJECT_ROOT / ".tmp",
+]
+
+
+def validate_output_path(dir_path: str) -> Path:
+    """
+    Validate that an output directory path is within allowed directories.
+
+    Args:
+        dir_path: The directory path to validate
+
+    Returns:
+        Resolved Path object
+
+    Raises:
+        ValueError: If path is outside allowed directories
+    """
+    path = Path(dir_path).resolve()
+
+    # Check if path is within any allowed directory
+    for allowed_dir in ALLOWED_OUTPUT_DIRS:
+        try:
+            path.relative_to(allowed_dir)
+            return path
+        except ValueError:
+            continue
+
+    # Also allow the exact allowed directories themselves
+    if path in ALLOWED_OUTPUT_DIRS:
+        return path
+
+    # Path traversal attempt or path outside allowed dirs
+    allowed_str = ", ".join(str(d) for d in ALLOWED_OUTPUT_DIRS)
+    raise ValueError(
+        f"Invalid output path: {dir_path}. "
+        f"Path must be within allowed directories: {allowed_str}"
+    )
+
+
 @dataclass
 class TestResult:
     """Result for a single test case."""
@@ -84,7 +127,8 @@ class ReportGenerator:
     """Generate evaluation reports in multiple formats."""
 
     def __init__(self, output_dir: str = "results"):
-        self.output_dir = Path(output_dir)
+        # Validate output path is within allowed directories (prevents path traversal)
+        self.output_dir = validate_output_path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_summary(
